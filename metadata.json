@@ -1,0 +1,5 @@
+{
+  "name": "Campus48",
+  "description": "A gamified school campus management system inspired by Campus 42, featuring automated grading, peer evaluation, and real-time student tracking.",
+  "requestFramePermissions": []
+}

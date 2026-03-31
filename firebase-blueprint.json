@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "TEACHER", "STUDENT", "FAMILY", "DIRECTOR", "admin", "teacher", "student", "family", "director"] },
+        "avatar": { "type": "string" },
+        "level": { "type": "integer" },
+        "xp": { "type": "integer" },
+        "course_id": { "type": "string" },
+        "student_id": { "type": "string", "description": "For FAMILY role, the ID of the student they are associated with" },
+        "school_id": { "type": "string" }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Educational mission or task",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "year": { "type": "integer" },
+        "is_active": { "type": "boolean" },
+        "assign_date": { "type": "string" },
+        "due_date": { "type": "string" },
+        "max_xp": { "type": "integer" }
+      },
+      "required": ["title", "year", "max_xp"]
+    },
+    "Point": {
+      "title": "Point",
+      "description": "Points assigned to a student",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "points": { "type": "integer" },
+        "mission_id": { "type": "string" },
+        "reason": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["user_id", "points"]
+    },
+    "School": {
+      "title": "School",
+      "description": "Educational institution",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A class or course of students",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "year": { "type": "integer" },
+        "school_id": { "type": "string" }
+      },
+      "required": ["name", "year", "school_id"]
+    },
+    "Subject": {
+      "title": "Subject",
+      "description": "A subject or topic of study",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "TeacherAssignment": {
+      "title": "TeacherAssignment",
+      "description": "Assignment of a teacher to a course and subject",
+      "type": "object",
+      "properties": {
+        "teacher_id": { "type": "string" },
+        "course_id": { "type": "string" },
+        "subject_id": { "type": "string" }
+      },
+      "required": ["teacher_id", "course_id", "subject_id"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A project for students to complete",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "max_points": { "type": "integer" },
+        "type": { "type": "string", "enum": ["INDIVIDUAL", "EQUIPO"] }
+      },
+      "required": ["title", "max_points", "type"]
+    },
+    "Badge": {
+      "title": "Badge",
+      "description": "An achievement badge",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" }
+      },
+      "required": ["name", "icon"]
+    },
+    "Level": {
+      "title": "Level",
+      "description": "Experience level definition",
+      "type": "object",
+      "properties": {
+        "level": { "type": "integer" },
+        "name": { "type": "string" },
+        "min_xp": { "type": "integer" }
+      },
+      "required": ["level", "name", "min_xp"]
+    },
+    "StudentBadge": {
+      "title": "StudentBadge",
+      "description": "Badge earned by a student",
+      "type": "object",
+      "properties": {
+        "student_id": { "type": "string" },
+        "badge_id": { "type": "string" },
+        "earned_at": { "type": "string" }
+      },
+      "required": ["student_id", "badge_id"]
+    },
+    "Alert": {
+      "title": "Alert",
+      "description": "System alert for a student",
+      "type": "object",
+      "properties": {
+        "student_id": { "type": "string" },
+        "student_name": { "type": "string" },
+        "type": { "type": "string", "enum": ["ATTENDANCE", "PERFORMANCE"] },
+        "severity": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "message": { "type": "string" },
+        "date": { "type": "string" }
+      },
+      "required": ["student_id", "type", "severity", "message", "date"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Student submission for a mission",
+      "type": "object",
+      "properties": {
+        "student_id": { "type": "string" },
+        "mission_id": { "type": "string" },
+        "url": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "created_at": { "type": "string" },
+        "grades": {
+          "type": "object",
+          "properties": {
+            "trayectoria": { "type": "integer" },
+            "explicacion": { "type": "integer" },
+            "entrega": { "type": "integer" },
+            "reflexion": { "type": "integer" }
+          }
+        }
+      },
+      "required": ["student_id", "mission_id", "url", "status"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance record",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "student_id": { "type": "string" },
+        "present": { "type": "boolean" }
+      },
+      "required": ["date", "student_id", "present"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/missions/{missionId}": { "schema": "Mission", "description": "Missions list" },
+    "/points/{pointId}": { "schema": "Point", "description": "Points transactions" },
+    "/schools/{schoolId}": { "schema": "School", "description": "Schools list" },
+    "/courses/{courseId}": { "schema": "Course", "description": "Courses list" },
+    "/subjects/{subjectId}": { "schema": "Subject", "description": "Subjects list" },
+    "/teacherAssignments/{assignmentId}": { "schema": "TeacherAssignment", "description": "Teacher assignments" },
+    "/projects/{projectId}": { "schema": "Project", "description": "Projects list" },
+    "/badges/{badgeId}": { "schema": "Badge", "description": "Badges list" },
+    "/levels/{levelId}": { "schema": "Level", "description": "Levels list" },
+    "/studentBadges/{sbId}": { "schema": "StudentBadge", "description": "Badges earned by students" },
+    "/alerts/{alertId}": { "schema": "Alert", "description": "System alerts" },
+    "/submissions/{submissionId}": { "schema": "Submission", "description": "Mission submissions" },
+    "/attendance/{attendanceId}": { "schema": "Attendance", "description": "Attendance records" }
+  }
+}

@@ -1,0 +1,252 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required) - Firebase Auth UID
+    //   - email: string (required) - User email
+    //   - name: string (required) - User name
+    //   - role: string (required, enum) - User role
+    //   - avatar: string (optional)
+    //   - level: integer (optional)
+    //   - xp: integer (optional)
+    //   - course_id: string (optional)
+    //   - school_id: string (optional)
+    //
+    // Collection: missions
+    // Document ID: {missionId}
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (optional)
+    //   - year: integer (required)
+    //   - is_active: boolean (optional)
+    //   - assign_date: string (optional)
+    //   - due_date: string (optional)
+    //   - max_xp: integer (required)
+    //
+    // Collection: points
+    // Document ID: {pointId}
+    // Fields:
+    //   - user_id: string (required)
+    //   - points: integer (required)
+    //   - mission_id: string (optional)
+    //   - reason: string (optional)
+    //   - created_at: timestamp (required)
+    //
+    // Collection: badges
+    // Document ID: {badgeId}
+    // Fields:
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - icon: string (required)
+    //
+    // Collection: levels
+    // Document ID: {levelId}
+    // Fields:
+    //   - level: integer (required)
+    //   - name: string (required)
+    //   - min_xp: integer (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "jrodriguezncs@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.upper() == 'ADMIN')
+        );
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.upper() == 'TEACHER';
+    }
+
+    function isDirector() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.upper() == 'DIRECTOR';
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      let allowedRoles = ["ADMIN", "TEACHER", "STUDENT", "FAMILY", "DIRECTOR", "admin", "teacher", "student", "family", "director"];
+      return hasRequiredFields(['uid', 'email', 'name', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in allowedRoles &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidMission(data) {
+      return hasRequiredFields(['title', 'year', 'max_xp']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.year is int &&
+             data.max_xp is int && data.max_xp >= 0;
+    }
+
+    function isValidPoint(data) {
+      return hasRequiredFields(['user_id', 'points']) &&
+             data.user_id is string &&
+             data.points is int;
+    }
+
+    function isValidBadge(data) {
+      return hasRequiredFields(['name', 'icon']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.icon is string;
+    }
+
+    function isValidLevel(data) {
+      return hasRequiredFields(['level', 'name', 'min_xp']) &&
+             data.level is int &&
+             data.name is string &&
+             data.min_xp is int;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || isTeacher() || isDirector());
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role.upper() == 'STUDENT' || request.resource.data.role.upper() == 'FAMILY' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /_internal_/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /_connection_test_/{docId} {
+      allow read: if isAuthenticated();
+    }
+
+    match /missions/{missionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher() || isDirector();
+    }
+
+    match /point_transactions/{pointId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.user_id) || isAdmin() || isTeacher() || isDirector());
+      allow create: if isAuthenticated() && (isAdmin() || isTeacher() || isDirector()) && isValidPoint(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher() || isDirector();
+    }
+
+    match /levels/{levelId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /student_badges/{sbId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isAdmin() || isTeacher() || isDirector());
+      allow update, delete: if isAdmin();
+    }
+
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isDirector();
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isDirector();
+    }
+
+    match /teacher_assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isDirector();
+    }
+
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isTeacher() || isDirector();
+    }
+
+    match /alerts/{alertId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.student_id) || isAdmin() || isTeacher() || isDirector());
+      allow write: if isAdmin() || isTeacher() || isDirector();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.student_id) || isAdmin() || isTeacher());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.student_id);
+      allow update: if isAuthenticated() && (isOwner(resource.data.student_id) || isAdmin() || isTeacher());
+      allow delete: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated() && (isAdmin() || isTeacher() || isDirector());
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isDirector();
+    }
+
+    match /peer_evaluations/{evaluationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isOwner(request.resource.data.evaluator_id) || isAdmin() || isTeacher());
+      allow update, delete: if isAdmin();
+    }
+
+    match /debug/{docId} {
+      allow read, write: if true;
+    }
+
+    // TEMPORARY: Allow all for debugging
+    match /{path=**} {
+      allow read, write: if true;
+    }
+  }
+}
